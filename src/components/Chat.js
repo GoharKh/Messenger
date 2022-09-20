@@ -1,55 +1,111 @@
-import { Fragment, useEffect, useState } from "react"
-import PropType from 'prop-types'
+import { useState, useContext, useEffect, useRef } from "react";
 
-const Chat = ({setNewMessage, messages, user}) => {
-  const [messageText, setMessageText] = useState('')
-  const [isExpired, setIsExpired] = useState(false)
-  const [isEdited, setIsEdited] = useState(false)
-  const [editId, setEditedId] = useState(null)
+import { AppContext } from "../context";
 
-  const sendMessage = e => {
-      e.preventDefault()
-      setMessageText('')
-      setNewMessage(messageText, user, isEdited, editId)
-  }
+
+export default function Chat({userName, firstFace}) {
+  const [messageText, setMessageText] = useState('');
+  const [isEdited, setIsEdited] = useState(false);
+  const [editId, setEditedId] = useState(null);
+
+  const {user1, user2, messages, setMessages, lastMessageId, setLastMessageId} = useContext(AppContext);
+
+  const messageRef = useRef()
+
+// auto scroll ei uzum dnei nerqev, amen nor messagei jamanak
+  // useEffect(() => {
+  //   if(messageRef) {
+  //     messageRef.current.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"})
+  //     console.log(messageRef.current)
+  //   }
+  // }, [messages])
 
   useEffect(() => {
-      const id = setInterval(() => setIsExpired(true), 5000)
+    if(messages.length) {
+      setLastMessageId(messages[messages.length - 1].id)
+      const id = setInterval(() => {
+        setLastMessageId('')
+      }, 5000)
       return () => clearInterval(id)
-  }, [messageText])
+    }
+  },[messages]);
 
-  const edit = (index) => {
-      const editing = messages.find(item => item.id === index)
-      console.log(messages, index, editing)
-      setMessageText(editing.text)
-      setIsEdited(true)
-      setEditedId(index)
-  }
+  const sendMessage = e => {
+    e.preventDefault()
+    if(messageText) {
+      setMessageText('')
+      setMessages([...messages, {text: messageText, user: userName, id: new Date().getTime().toString(), time: `${new Date().getHours()}:${new Date().getMinutes()}`}])
+      if(isEdited) {
+        setMessages(messages.map(item => {
+          if(item.id === editId) {
+            return {...item, text: messageText};
+          }
+          return item;
+        }));
+      };
+    }
+  };
 
-  return(
-    <div>
+  const editMessage = (id) => {
+    const editing = messages.find(item => item.id === id)
+    setMessageText(editing.text)
+    setIsEdited(true)
+    setEditedId(id)
+    console.log(id, lastMessageId)
+  };
+  return (
+    <>
+    <div className="chat-history">
       <ul>
         {messages.map((item, index) => {
-          return (
-            <Fragment key={index}>
-              <li >{item.user} {item.text}</li>
-              {isExpired ? null : <button onClick={() => edit(item.id)}>edit</button>}
-            </Fragment>
-          )
+            const {text, user, id, time} = item
+            if(firstFace === 'user1') {
+              return <>
+                <li key={index} className='clearfix'>
+                  <div className="message-data">
+                    <span className="message-data-name">{user}</span>
+                    <span className="message-data-time">{time}</span>
+                  </div>
+                  <div className={`${user === user1 ? 'message my-message' : 'message other-message float-right'}`}>
+                  {text}
+                  {user === user1 && id === lastMessageId &&
+                  <button className='edit-btn' onClick={() => {
+                      console.log(user1, user)
+                      editMessage(id)
+                  }}><span className="material-symbols-outlined">
+                  edit
+                  </span></button> }
+                  </div>
+                </li>
+              </>
+            } else {
+              return <>
+                <li key={index} ref={messageRef } className='clearfix'>
+                  <div className="message-data">
+                    <span className="message-data-name">{user}</span>
+                    <span className="message-data-time">{time}</span>
+                  </div>
+                  <div className={`${user === user2 ? 'message my-message' : 'message other-message float-right'}`}>
+                    {text}
+                    {user === user2 && id === lastMessageId && <button className='edit-btn' onClick={() => {
+                        editMessage(id)
+                      }}>
+                        <span className="material-symbols-outlined"> edit </span>
+                      </button> 
+                    }
+                  </div>
+                </li>
+              </>
+            }
         })}
       </ul>
-      <form onSubmit={sendMessage}>
-        <input value={messageText} onChange={e => setMessageText(e.target.value)}/>
-        <button>send</button>
+      </div>
+      <form className="chat-message clearfix" >
+        <input  name="message-to-send" id="message-to-send" placeholder ="Type your message" rows="3" value={messageText} onChange={e => setMessageText(e.target.value)}></input>          
+        <i className="fa fa-file-o"></i> &nbsp;&nbsp;&nbsp;
+        <i className="fa fa-file-image-o"></i>
+        <button type="submit" onClick={sendMessage}>Send</button>
       </form>
-    </div>
-  )
-}
-
-export default Chat
-
-Chat.propTypes = {
-  setNewMessage: PropType.func.isRequired,
-  messages: PropType.array.isRequired,
-  user: PropType.string.isRequired,
-}
+    </>
+  );
+};

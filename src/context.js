@@ -27,6 +27,8 @@ export const AppProvider = ({children}) => {
         const localData = localStorage.getItem(`${user1}${user2}`)
         return localData ? [...JSON.parse(localData)] : []
     })
+    const [error, setError] = useState('')
+    const [lastMessageId, setLastMessageId] = useState('')
 
     useEffect(() => {
         localStorage.setItem(`user1`, JSON.stringify(user1))
@@ -55,7 +57,11 @@ export const AppProvider = ({children}) => {
         isActive2,
         setIsActive2,
         messages,
-        setMessages
+        setMessages,
+        error,
+        setError,
+        lastMessageId,
+        setLastMessageId
     }}>
         {children}
     </AppContext.Provider>
